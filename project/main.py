@@ -1,4 +1,5 @@
 import tkinter as tk
+import random
 
 CELL_SIZE = 20
 GRID_WIDTH = 30
@@ -19,6 +20,9 @@ class SnakeGame:
         self.new_direction = "Right"
         self.running = True
 
+        self.food = None
+        self.spawn_food()
+
         self.bind_keys()
         self.draw()
         self.game_loop()
@@ -33,6 +37,13 @@ class SnakeGame:
         opposites = {"Up": "Down", "Down": "Up", "Left": "Right", "Right": "Left"}
         if dir != opposites.get(self.direction):
             self.new_direction = dir
+
+    def spawn_food(self):
+        while True:
+            pos = (random.randint(0, GRID_WIDTH - 1), random.randint(0, GRID_HEIGHT - 1))
+            if pos not in self.snake:
+                self.food = pos
+                break
 
     def game_loop(self):
         if not self.running:
@@ -64,12 +75,29 @@ class SnakeGame:
                                     text="Игра окончена!", font=("Arial", 24), fill="white")
             return
 
-        self.snake = [(head_x, head_y)] + self.snake[:-1]
+        new_head = (head_x, head_y)
+        self.snake.insert(0, new_head)
+
+        if new_head == self.food:
+            self.spawn_food()
+        else:
+            self.snake.pop()
+
         self.draw()
         self.root.after(SPEED, self.game_loop)
 
     def draw(self):
         self.canvas.delete("all")
+
+        
+        if self.food:
+            self.canvas.create_rectangle(
+                self.food[0] * CELL_SIZE, self.food[1] * CELL_SIZE,
+                (self.food[0] + 1) * CELL_SIZE, (self.food[1] + 1) * CELL_SIZE,
+                fill="red", outline="darkred"
+            )
+
+       
         for x, y in self.snake:
             self.canvas.create_rectangle(
                 x * CELL_SIZE, y * CELL_SIZE,
