@@ -15,15 +15,21 @@ class SnakeGame:
         self.canvas = tk.Canvas(root, width=GRID_WIDTH * CELL_SIZE, height=GRID_HEIGHT * CELL_SIZE, bg="black")
         self.canvas.pack()
 
+        # Статус-бар
+        self.status = tk.Label(root, text="", font=("Arial", 12), anchor="w")
+        self.status.pack(fill=tk.X)
+
         self.snake = [(GRID_WIDTH // 2 - i, GRID_HEIGHT // 2) for i in range(INITIAL_SNAKE)]
         self.direction = "Right"
         self.new_direction = "Right"
         self.running = True
 
         self.food = None
-        self.spawn_food()
+        self.score = 0
 
+        self.spawn_food()
         self.bind_keys()
+        self.update_status()
         self.draw()
         self.game_loop()
 
@@ -45,6 +51,9 @@ class SnakeGame:
                 self.food = pos
                 break
 
+    def update_status(self):
+        self.status.config(text=f"Счёт: {self.score}")
+
     def game_loop(self):
         if not self.running:
             return
@@ -61,14 +70,12 @@ class SnakeGame:
         elif self.direction == "Right":
             head_x += 1
 
-        
         if head_x < 0 or head_x >= GRID_WIDTH or head_y < 0 or head_y >= GRID_HEIGHT:
             self.running = False
             self.canvas.create_text(GRID_WIDTH * CELL_SIZE // 2, GRID_HEIGHT * CELL_SIZE // 2,
                                     text="Игра окончена!", font=("Arial", 24), fill="white")
             return
 
-        
         if (head_x, head_y) in self.snake:
             self.running = False
             self.canvas.create_text(GRID_WIDTH * CELL_SIZE // 2, GRID_HEIGHT * CELL_SIZE // 2,
@@ -79,7 +86,9 @@ class SnakeGame:
         self.snake.insert(0, new_head)
 
         if new_head == self.food:
+            self.score += 1
             self.spawn_food()
+            self.update_status()
         else:
             self.snake.pop()
 
@@ -89,7 +98,7 @@ class SnakeGame:
     def draw(self):
         self.canvas.delete("all")
 
-        
+        # Еда
         if self.food:
             self.canvas.create_rectangle(
                 self.food[0] * CELL_SIZE, self.food[1] * CELL_SIZE,
@@ -97,7 +106,7 @@ class SnakeGame:
                 fill="red", outline="darkred"
             )
 
-       
+        # Змейка
         for x, y in self.snake:
             self.canvas.create_rectangle(
                 x * CELL_SIZE, y * CELL_SIZE,
