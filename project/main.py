@@ -26,6 +26,8 @@ class SnakeGame:
         self.ctrl_pressed = False
         self.score = 0
         self.food = None
+        self.food_bonus = False
+        self.food_value = 1
 
         self.spawn_food()
         self.bind_keys()
@@ -69,6 +71,9 @@ class SnakeGame:
             if pos not in self.snake:
                 self.food = pos
                 break
+        # 10% шанс на бонусное яблоко
+        self.food_bonus = random.random() < 0.1
+        self.food_value = 5 if self.food_bonus else 1
 
     def update_status(self):
         self.status.config(text=f"Счёт: {self.score}")
@@ -105,14 +110,16 @@ class SnakeGame:
         self.snake.insert(0, new_head)
 
         if new_head == self.food:
-            self.score += 1
+            self.score += self.food_value
+            # Удлинение на extra сегментов, т.к. один уже добавили
+            for _ in range(self.food_value - 1):
+                self.snake.append(self.snake[-1])
             self.spawn_food()
             self.update_status()
         else:
             self.snake.pop()
 
         self.draw()
-
         delay = BASE_SPEED if not self.ctrl_pressed else max(10, BASE_SPEED // 2)
         self.root.after(delay, self.game_loop)
 
@@ -120,19 +127,21 @@ class SnakeGame:
         self.canvas.delete("all")
 
         # Еда
+        color = "orange" if self.food_bonus else "red"
         if self.food:
             self.canvas.create_rectangle(
                 self.food[0] * CELL_SIZE, self.food[1] * CELL_SIZE,
                 (self.food[0] + 1) * CELL_SIZE, (self.food[1] + 1) * CELL_SIZE,
-                fill="red", outline="darkred"
+                fill=color, outline="darkred"
             )
 
         # Змейка
-        for x, y in self.snake:
+        for i, (x, y) in enumerate(self.snake):
+            fill = "lime" if i == 0 else "green"
             self.canvas.create_rectangle(
                 x * CELL_SIZE, y * CELL_SIZE,
                 (x + 1) * CELL_SIZE, (y + 1) * CELL_SIZE,
-                fill="green", outline="darkgreen"
+                fill=fill, outline="darkgreen"
             )
 
 if __name__ == "__main__":
