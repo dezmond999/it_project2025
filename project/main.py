@@ -25,11 +25,18 @@ class SnakeGame:
         self.paused = False
         self.ctrl_pressed = False
         self.score = 0
+
         self.food = None
         self.food_bonus = False
         self.food_value = 1
 
+        self.use_walls = True  # ✅ Флаг для активации стен
+        self.walls = []
+
         self.spawn_food()
+        if self.use_walls:
+            self.generate_walls()
+
         self.bind_keys()
         self.update_status()
         self.draw()
@@ -68,12 +75,19 @@ class SnakeGame:
     def spawn_food(self):
         while True:
             pos = (random.randint(0, GRID_WIDTH - 1), random.randint(0, GRID_HEIGHT - 1))
-            if pos not in self.snake:
+            if pos not in self.snake and pos not in self.walls:
                 self.food = pos
                 break
-        # 10% шанс на бонусное яблоко
         self.food_bonus = random.random() < 0.1
         self.food_value = 5 if self.food_bonus else 1
+
+    def generate_walls(self):
+        self.walls = []
+        wall_count = random.randint(10, 20)
+        while len(self.walls) < wall_count:
+            pos = (random.randint(0, GRID_WIDTH - 1), random.randint(0, GRID_HEIGHT - 1))
+            if pos not in self.snake and pos != self.food and pos not in self.walls:
+                self.walls.append(pos)
 
     def update_status(self):
         self.status.config(text=f"Счёт: {self.score}")
@@ -96,12 +110,12 @@ class SnakeGame:
 
         if head_x < 0 or head_x >= GRID_WIDTH or head_y < 0 or head_y >= GRID_HEIGHT:
             self.running = False
-            self.canvas.create_text(GRID_WIDTH * CELL_SIZE // 2, GRID_HEIGHT * CELL_SIZE // 2,
-                                    text="Игра окончена!", font=("Arial", 24), fill="white")
-            return
-
-        if (head_x, head_y) in self.snake:
+        elif (head_x, head_y) in self.snake:
             self.running = False
+        elif (head_x, head_y) in self.walls:
+            self.running = False
+
+        if not self.running:
             self.canvas.create_text(GRID_WIDTH * CELL_SIZE // 2, GRID_HEIGHT * CELL_SIZE // 2,
                                     text="Игра окончена!", font=("Arial", 24), fill="white")
             return
@@ -111,7 +125,6 @@ class SnakeGame:
 
         if new_head == self.food:
             self.score += self.food_value
-            # Удлинение на extra сегментов, т.к. один уже добавили
             for _ in range(self.food_value - 1):
                 self.snake.append(self.snake[-1])
             self.spawn_food()
@@ -125,6 +138,14 @@ class SnakeGame:
 
     def draw(self):
         self.canvas.delete("all")
+
+        # Стены
+        for x, y in self.walls:
+            self.canvas.create_rectangle(
+                x * CELL_SIZE, y * CELL_SIZE,
+                (x + 1) * CELL_SIZE, (y + 1) * CELL_SIZE,
+                fill="blue", outline="blue"
+            )
 
         # Еда
         color = "orange" if self.food_bonus else "red"
