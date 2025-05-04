@@ -5,7 +5,7 @@ CELL_SIZE = 20
 GRID_WIDTH = 30
 GRID_HEIGHT = 20
 INITIAL_SNAKE = 3
-SPEED = 150
+BASE_SPEED = 150
 
 class SnakeGame:
     def __init__(self, root):
@@ -15,7 +15,6 @@ class SnakeGame:
         self.canvas = tk.Canvas(root, width=GRID_WIDTH * CELL_SIZE, height=GRID_HEIGHT * CELL_SIZE, bg="black")
         self.canvas.pack()
 
-        # Статус-бар
         self.status = tk.Label(root, text="", font=("Arial", 12), anchor="w")
         self.status.pack(fill=tk.X)
 
@@ -23,9 +22,10 @@ class SnakeGame:
         self.direction = "Right"
         self.new_direction = "Right"
         self.running = True
-
-        self.food = None
+        self.paused = False
+        self.ctrl_pressed = False
         self.score = 0
+        self.food = None
 
         self.spawn_food()
         self.bind_keys()
@@ -38,11 +38,30 @@ class SnakeGame:
         self.root.bind("<Down>", lambda e: self.set_direction("Down"))
         self.root.bind("<Left>", lambda e: self.set_direction("Left"))
         self.root.bind("<Right>", lambda e: self.set_direction("Right"))
+        self.root.bind("<space>", lambda e: self.toggle_pause())
+        self.root.bind("<Control_L>", lambda e: self.set_ctrl(True))
+        self.root.bind("<KeyRelease-Control_L>", lambda e: self.set_ctrl(False))
+
+    def set_ctrl(self, value):
+        self.ctrl_pressed = value
 
     def set_direction(self, dir):
         opposites = {"Up": "Down", "Down": "Up", "Left": "Right", "Right": "Left"}
         if dir != opposites.get(self.direction):
             self.new_direction = dir
+
+    def toggle_pause(self):
+        if not self.running:
+            return
+        self.paused = not self.paused
+        if self.paused:
+            self.canvas.create_text(
+                GRID_WIDTH * CELL_SIZE // 2,
+                GRID_HEIGHT * CELL_SIZE // 2,
+                text="Пауза", font=("Arial", 30), fill="white"
+            )
+        else:
+            self.game_loop()
 
     def spawn_food(self):
         while True:
@@ -55,7 +74,7 @@ class SnakeGame:
         self.status.config(text=f"Счёт: {self.score}")
 
     def game_loop(self):
-        if not self.running:
+        if not self.running or self.paused:
             return
 
         self.direction = self.new_direction
@@ -93,7 +112,9 @@ class SnakeGame:
             self.snake.pop()
 
         self.draw()
-        self.root.after(SPEED, self.game_loop)
+
+        delay = BASE_SPEED if not self.ctrl_pressed else max(10, BASE_SPEED // 2)
+        self.root.after(delay, self.game_loop)
 
     def draw(self):
         self.canvas.delete("all")
