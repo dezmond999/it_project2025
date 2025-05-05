@@ -1,4 +1,4 @@
-исправлена ошибка прохода сквозь границы, также добавлено
+
 import tkinter as tk
 from tkinter import ttk
 from tkinter.colorchooser import askcolor
