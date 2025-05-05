@@ -67,6 +67,8 @@ class SnakeGame:
         self.grid_height = DEFAULT_HEIGHT
         self.use_walls = False
         self.walls = []
+        self.extra_life = False
+        self.last_gift_score = 0
 
         self.records = []
         self.load_scores()
@@ -215,11 +217,10 @@ class SnakeGame:
                 return cell
 
     def spawn_food(self):
-        self.food_bonus = random.random() < 0.1
+        self.food_bonus = random.random() < 0.2
         self.food_value = 5 if self.food_bonus else 1
         self.food = self.get_free_cell()
 
-        # Зелёное яблоко
         if random.random() < 0.4:
             self.food_green = self.get_free_cell(exclude=[self.food])
             self.food_green_active = True
@@ -282,6 +283,40 @@ class SnakeGame:
             self.elapsed_time = int(time.time() - self.start_time)
             self.update_status()
             self.root.after(1000, self.update_timer)
+        
+    def pause_and_show_boxes(self):
+        self.paused = True
+        popup = tk.Toplevel(self.root)
+        popup.title("Выбор шкатулки")
+        popup.geometry("300x200")
+        popup.configure(bg=COLORS["bg"])
+        popup.grab_set()
+
+        label = tk.Label(popup, text="Выберите одну из шкатулок", font=("Arial", 12), bg=COLORS["bg"], fg=COLORS["text"])
+        label.pack(pady=10)
+
+        def choose_box(option):
+            if option == 1:
+                self.score += 10
+                tail = self.snake[-1]
+                self.snake.extend([tail] * 10)
+            elif option == 2:
+                self.extra_life = True
+            elif option == 3:
+                popup.destroy()
+                self.paused = False
+                self.game_over()
+                return
+
+            popup.destroy()
+            self.paused = False
+            self.update_status()
+            self.update_timer()
+            self.game_loop()
+
+        for i in range(1, 4):
+            btn = tk.Button(popup, text=f"Шкатулка {i}", command=lambda opt=i: choose_box(opt))
+            btn.pack(pady=5)
 
     def game_loop(self):
         if self.paused or not self.running:
@@ -312,10 +347,16 @@ class SnakeGame:
                 self.snake.extend([(self.snake[-1][0], self.snake[-1][1])] * (self.food_value - 1))
             self.spawn_food()
             ate = True
+
         elif self.food_green_active and (head_x, head_y) == self.food_green:
             self.score += 3
             self.food_green_active = False
             ate = True
+
+        if self.score % 30 == 0 and self.score != 0 and self.score != self.last_gift_score:
+            self.last_gift_score = self.score
+            self.pause_and_show_boxes()
+            return
 
         if not ate:
             self.snake.pop()
@@ -327,6 +368,13 @@ class SnakeGame:
         self.root.after(delay, self.game_loop)
 
     def game_over(self):
+        if self.extra_life:
+            self.extra_life = False
+            self.paused = False
+            self.update_timer()
+            self.game_loop()
+            return
+
         self.running = False
         self.save_score()
         self.canvas.create_text(
