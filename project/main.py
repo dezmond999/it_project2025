@@ -1,3 +1,4 @@
+исправлена ошибка прохода сквозь границы, также добавлено
 import tkinter as tk
 from tkinter import ttk
 from tkinter.colorchooser import askcolor
@@ -16,11 +17,12 @@ COLORS = {
     "bg": "#2e3440",
     "snake": "#a3be8c",
     "food": "#ebcb8b",
-    "food_bonus": "#ff8c00",  
+    "food_bonus": "#ff8c00",
+    "food_green": "#00ff00",  # Цвет зелёного яблока
     "wall": "#5e81ac",
     "text": "#eceff4",
     "border": "#4c566a",
-    "snake_head": "#ff0000"  
+    "snake_head": "#ff0000"
 }
 
 class SnakeGame:
@@ -54,7 +56,9 @@ class SnakeGame:
         self.speed = GAME_SPEED[self.level]
         self.snake = []
         self.food = None
-        self.food_bonus = None 
+        self.food_bonus = None
+        self.food_green = None
+        self.food_green_active = False
         self.player_name = "Игрок"
         self.snake_color = COLORS["snake"]
         self.start_time = None
@@ -74,10 +78,10 @@ class SnakeGame:
     def reset_scores(self):
         result = msgbox.askyesno("Подтверждение", "Вы точно уверены, что хотите сбросить рекорды?")
         if result:
-            self.records.clear() 
+            self.records.clear()
             if os.path.exists(SCORE_FILE):
-                os.remove(SCORE_FILE) 
-            self.update_records_table()      
+                os.remove(SCORE_FILE)
+            self.update_records_table()
 
     def setup_records_table(self):
         columns = ("Игрок", "Счёт", "Время", "Сложность")
@@ -203,19 +207,25 @@ class SnakeGame:
         self.update_timer()
         self.game_loop()
 
-    def spawn_food(self):
-        self.food_bonus = random.random() < 0.1  
-        if self.food_bonus:
-            self.food = (random.randint(0, self.grid_width - 1), random.randint(0, self.grid_height - 1))
-            while self.food in self.snake or self.food in self.walls:
-                self.food = (random.randint(0, self.grid_width - 1), random.randint(0, self.grid_height - 1))
-            self.food_value = 5 
-        else:
-            self.food_value = 1
-            self.food = (random.randint(0, self.grid_width - 1), random.randint(0, self.grid_height - 1))
-            while self.food in self.snake or self.food in self.walls:
-                self.food = (random.randint(0, self.grid_width - 1), random.randint(0, self.grid_height - 1))
+    def get_free_cell(self, exclude=None):
+        exclude = exclude or []
+        while True:
+            cell = (random.randint(0, self.grid_width - 1), random.randint(0, self.grid_height - 1))
+            if cell not in self.snake and cell not in self.walls and cell not in exclude:
+                return cell
 
+    def spawn_food(self):
+        self.food_bonus = random.random() < 0.1
+        self.food_value = 5 if self.food_bonus else 1
+        self.food = self.get_free_cell()
+
+        # Зелёное яблоко
+        if random.random() < 0.4:
+            self.food_green = self.get_free_cell(exclude=[self.food])
+            self.food_green_active = True
+        else:
+            self.food_green = None
+            self.food_green_active = False
 
     def generate_walls(self):
         self.walls = []
@@ -255,6 +265,13 @@ class SnakeGame:
             fill=food_color, outline=food_color
         )
 
+        if self.food_green_active and self.food_green:
+            self.canvas.create_rectangle(
+                self.food_green[0] * CELL_SIZE, self.food_green[1] * CELL_SIZE,
+                (self.food_green[0] + 1) * CELL_SIZE, (self.food_green[1] + 1) * CELL_SIZE,
+                fill=COLORS["food_green"], outline=COLORS["food_green"]
+            )
+
     def update_status(self):
         self.status_bar.config(
             text=f"Игрок: {self.player_name} | Счёт: {self.score} | Время: {self.elapsed_time} сек | Сложность: {self.level}"
@@ -278,20 +295,29 @@ class SnakeGame:
         elif self.direction == "Left": head_x -= 1
         elif self.direction == "Right": head_x += 1
 
-        if self.use_walls and (head_x < 0 or head_x >= self.grid_width or head_y < 0 or head_y >= self.grid_height):
+        if head_x < 0 or head_x >= self.grid_width or head_y < 0 or head_y >= self.grid_height:
             self.game_over()
             return
+
 
         if (head_x, head_y) in self.snake or (head_x, head_y) in self.walls:
             self.game_over()
             return
 
+        ate = False
+
         if (head_x, head_y) == self.food:
             self.score += self.food_value
             if self.food_bonus:
-                self.snake.extend([(self.snake[-1][0], self.snake[-1][1])] * (self.food_value - 1)) 
+                self.snake.extend([(self.snake[-1][0], self.snake[-1][1])] * (self.food_value - 1))
             self.spawn_food()
-        else:
+            ate = True
+        elif self.food_green_active and (head_x, head_y) == self.food_green:
+            self.score += 3
+            self.food_green_active = False
+            ate = True
+
+        if not ate:
             self.snake.pop()
 
         self.snake = [(head_x, head_y)] + self.snake
