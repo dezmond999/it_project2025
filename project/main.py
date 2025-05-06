@@ -69,6 +69,8 @@ class SnakeGame:
         self.walls = []
         self.extra_life = False
         self.last_gift_score = 0
+        self.processed_milestones = set()
+
 
         self.records = []
         self.load_scores()
@@ -221,6 +223,7 @@ class SnakeGame:
         self.food_value = 5 if self.food_bonus else 1
         self.food = self.get_free_cell()
 
+        # Зелёное яблоко
         if random.random() < 0.4:
             self.food_green = self.get_free_cell(exclude=[self.food])
             self.food_green_active = True
@@ -288,35 +291,45 @@ class SnakeGame:
         self.paused = True
         popup = tk.Toplevel(self.root)
         popup.title("Выбор шкатулки")
-        popup.geometry("300x200")
+        popup.geometry("300x220")
         popup.configure(bg=COLORS["bg"])
         popup.grab_set()
 
         label = tk.Label(popup, text="Выберите одну из шкатулок", font=("Arial", 12), bg=COLORS["bg"], fg=COLORS["text"])
         label.pack(pady=10)
 
+        result_label = tk.Label(popup, text="", font=("Arial", 10), bg=COLORS["bg"], fg=COLORS["text"])
+        result_label.pack(pady=5)
+
         def choose_box(option):
             if option == 1:
                 self.score += 10
                 tail = self.snake[-1]
                 self.snake.extend([tail] * 10)
+                result_text = "Вы выбрали Шкатулку 1: +10 очков и +10 длины"
             elif option == 2:
                 self.extra_life = True
+                result_text = "Вы выбрали Шкатулку 2: вторая жизнь"
             elif option == 3:
-                popup.destroy()
-                self.paused = False
-                self.game_over()
+                result_text = "Вы выбрали Шкатулку 3: смерть"
+                result_label.config(text=result_text)
+                popup.after(1500, lambda: [popup.destroy(), self.resume_or_die()])
                 return
 
-            popup.destroy()
-            self.paused = False
-            self.update_status()
-            self.update_timer()
-            self.game_loop()
+            result_label.config(text=result_text)
+            popup.after(1500, lambda: [popup.destroy(), self.resume_or_die()])
 
         for i in range(1, 4):
             btn = tk.Button(popup, text=f"Шкатулка {i}", command=lambda opt=i: choose_box(opt))
             btn.pack(pady=5)
+
+    def resume_or_die(self):
+        if not self.running:
+            return
+        self.paused = False
+        self.update_status()
+        self.update_timer()
+        self.game_loop()
 
     def game_loop(self):
         if self.paused or not self.running:
@@ -353,8 +366,10 @@ class SnakeGame:
             self.food_green_active = False
             ate = True
 
-        if self.score % 30 == 0 and self.score != 0 and self.score != self.last_gift_score:
-            self.last_gift_score = self.score
+            # Проверка на достижение кратного 30 счёта и чтобы не повторять показ
+        milestone = (self.score // 30) * 30
+        if milestone >= 30 and milestone not in self.processed_milestones:
+            self.processed_milestones.add(milestone)
             self.pause_and_show_boxes()
             return
 
