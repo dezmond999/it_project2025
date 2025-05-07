@@ -18,7 +18,7 @@ COLORS = {
     "snake": "#a3be8c",
     "food": "#ebcb8b",
     "food_bonus": "#ff8c00",
-    "food_green": "#00ff00",  # Цвет зелёного яблока
+    "food_green": "#00ff00",  
     "wall": "#5e81ac",
     "text": "#eceff4",
     "border": "#4c566a",
@@ -70,6 +70,7 @@ class SnakeGame:
         self.extra_life = False
         self.last_gift_score = 0
         self.processed_milestones = set()
+        self.extra_life = False
 
 
         self.records = []
@@ -223,7 +224,7 @@ class SnakeGame:
         self.food_value = 5 if self.food_bonus else 1
         self.food = self.get_free_cell()
 
-        # Зелёное яблоко
+        
         if random.random() < 0.4:
             self.food_green = self.get_free_cell(exclude=[self.food])
             self.food_green_active = True
@@ -366,7 +367,6 @@ class SnakeGame:
             self.food_green_active = False
             ate = True
 
-            # Проверка на достижение кратного 30 счёта и чтобы не повторять показ
         milestone = (self.score // 30) * 30
         if milestone >= 30 and milestone not in self.processed_milestones:
             self.processed_milestones.add(milestone)
@@ -385,19 +385,42 @@ class SnakeGame:
     def game_over(self):
         if self.extra_life:
             self.extra_life = False
-            self.paused = False
-            self.update_timer()
-            self.game_loop()
-            return
-
-        self.running = False
-        self.save_score()
+            self.respawn_after_life()
+        else:
+            self.running = False
+            self.save_score()
+            self.canvas.create_text(
+                self.grid_width * CELL_SIZE // 2,
+                self.grid_height * CELL_SIZE // 2,
+                text=f"Игра окончена!\nСчёт: {self.score}",
+                font=("Arial", 24), fill=COLORS["text"]
+            )
+    def respawn_after_life(self):
+        self.canvas.delete("all")
         self.canvas.create_text(
             self.grid_width * CELL_SIZE // 2,
             self.grid_height * CELL_SIZE // 2,
-            text=f"Игра окончена!\nСчёт: {self.score}",
-            font=("Arial", 24), fill=COLORS["text"]
+            text="⚡ Вы воскресли! ⚡",
+            font=("Arial", 28, "bold"),
+            fill="#00ffcc"
         )
+
+        self.root.after(100, self._continue_after_effect)
+        
+    def _continue_after_effect(self):
+        self.snake = [(self.grid_width // 2 - i, self.grid_height // 2) for i in range(3)]
+        self.direction = "Right"
+        self.new_direction = "Right"
+        self.food = None
+        self.food_green = None
+        self.food_green_active = False
+        if self.use_walls:
+            self.generate_walls()
+        self.spawn_food()
+        self.draw()
+        self.update_status()
+        self.update_timer()
+        self.game_loop()
 
     def toggle_pause(self):
         if self.running:
