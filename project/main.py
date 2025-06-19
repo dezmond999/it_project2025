@@ -79,6 +79,8 @@ class SnakeGame:
         self.show_player_setup()
         self.reset_button = tk.Button(self.records_frame, text="Сбросить рекорды", command=self.reset_scores)
         self.reset_button.pack(pady=10)
+        self.reset_button.pack(pady=10)
+        self.show_legend()
 
     def reset_scores(self):
         result = msgbox.askyesno("Подтверждение", "Вы точно уверены, что хотите сбросить рекорды?")
@@ -132,6 +134,8 @@ class SnakeGame:
         self.root.bind("<Return>", lambda e: self.new_game() if not self.running else None)
         self.root.bind("<Control_L>", lambda e: self.set_ctrl(True))
         self.root.bind("<KeyRelease-Control_L>", lambda e: self.set_ctrl(False))
+        self.root.bind("r", lambda e: self.randomize_theme())
+
 
     def set_ctrl(self, pressed):
         self.ctrl_pressed = pressed
@@ -433,7 +437,40 @@ class SnakeGame:
             else:
                 self.update_timer()
                 self.game_loop()
+    def show_legend(self):
+        legend_text = (
+            "Управление: ← ↑ ↓ → — движение | "
+            "Пробел — пауза | Enter — новая игра | Ctrl — ускорение | R - смена фона"
+        )
+        self.legend_label = tk.Label(
+            self.game_frame, text=legend_text,
+            font=("Arial", 10), bg=COLORS["bg"], fg=COLORS["text"]
+        )
+        self.legend_label.pack(fill=tk.X, side=tk.BOTTOM)
+    def randomize_theme(self):
+        def random_color():
+            return "#%06x" % random.randint(0, 0xFFFFFF)
 
+        COLORS["bg"] = random_color()
+        COLORS["text"] = random_color()
+        COLORS["snake"] = random_color()
+        COLORS["snake_head"] = random_color()
+        COLORS["food"] = random_color()
+        COLORS["food_bonus"] = random_color()
+        COLORS["food_green"] = random_color()
+        COLORS["wall"] = random_color()
+        COLORS["border"] = random_color()
+
+        self.snake_color = COLORS["snake"] 
+
+        self.game_frame.config(bg=COLORS["bg"])
+        self.canvas.config(bg=COLORS["bg"])
+        self.status_bar.config(bg=COLORS["bg"], fg=COLORS["text"])
+        if hasattr(self, 'legend_label'):
+            self.legend_label.config(bg=COLORS["bg"], fg=COLORS["text"])
+
+        self.draw()
+        self.update_status()
 
 if __name__ == "__main__":
     root = tk.Tk()
