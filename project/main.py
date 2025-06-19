@@ -81,6 +81,8 @@ class SnakeGame:
         self.reset_button.pack(pady=10)
         self.reset_button.pack(pady=10)
         self.show_legend()
+        self.is_3d = False
+
 
     def reset_scores(self):
         result = msgbox.askyesno("Подтверждение", "Вы точно уверены, что хотите сбросить рекорды?")
@@ -135,6 +137,8 @@ class SnakeGame:
         self.root.bind("<Control_L>", lambda e: self.set_ctrl(True))
         self.root.bind("<KeyRelease-Control_L>", lambda e: self.set_ctrl(False))
         self.root.bind("r", lambda e: self.randomize_theme())
+        self.root.bind("q", lambda e: self.toggle_3d_mode())
+
 
 
     def set_ctrl(self, pressed):
@@ -253,33 +257,66 @@ class SnakeGame:
             self.canvas.create_line(0, j * CELL_SIZE, self.grid_width * CELL_SIZE, j * CELL_SIZE, fill=COLORS["border"])
 
         for wall in self.walls:
-            self.canvas.create_rectangle(
-                wall[0] * CELL_SIZE, wall[1] * CELL_SIZE,
-                (wall[0] + 1) * CELL_SIZE, (wall[1] + 1) * CELL_SIZE,
-                fill=COLORS["wall"], outline=COLORS["wall"]
-            )
+            x1 = wall[0] * CELL_SIZE
+            y1 = wall[1] * CELL_SIZE
+            x2 = x1 + CELL_SIZE
+            y2 = y1 + CELL_SIZE
+
+            if self.is_3d:
+                self.canvas.create_rectangle(x1 + 2, y1 + 2, x2 + 2, y2 + 2, fill="#111111", outline="")
+                self.canvas.create_rectangle(x1, y1, x2, y2, fill=COLORS["wall"], outline="#aaaaaa")
+            else:
+                self.canvas.create_rectangle(x1, y1, x2, y2, fill=COLORS["wall"], outline=COLORS["wall"])
 
         for i, segment in enumerate(self.snake):
             color = COLORS["snake_head"] if i == 0 else self.snake_color
-            self.canvas.create_rectangle(
-                segment[0] * CELL_SIZE, segment[1] * CELL_SIZE,
-                (segment[0] + 1) * CELL_SIZE, (segment[1] + 1) * CELL_SIZE,
-                fill=color, outline=color
-            )
+            x1 = segment[0] * CELL_SIZE
+            y1 = segment[1] * CELL_SIZE
+            x2 = x1 + CELL_SIZE
+            y2 = y1 + CELL_SIZE
+
+            if self.is_3d:
+                self.canvas.create_oval(x1 + 2, y1 + 2, x2 + 2, y2 + 2, fill="#222222", outline="")
+                self.canvas.create_oval(x1, y1, x2, y2, fill=color, outline="#999999" if i == 0 else "#555555")
+            else:
+                self.canvas.create_rectangle(x1, y1, x2, y2, fill=color, outline=color)
 
         food_color = COLORS["food_bonus"] if self.food_bonus else COLORS["food"]
-        self.canvas.create_rectangle(
-            self.food[0] * CELL_SIZE, self.food[1] * CELL_SIZE,
-            (self.food[0] + 1) * CELL_SIZE, (self.food[1] + 1) * CELL_SIZE,
-            fill=food_color, outline=food_color
-        )
+        x1 = self.food[0] * CELL_SIZE
+        y1 = self.food[1] * CELL_SIZE
+        x2 = x1 + CELL_SIZE
+        y2 = y1 + CELL_SIZE
+
+        if self.is_3d:
+            self.canvas.create_oval(x1 + 2, y1 + 2, x2 + 2, y2 + 2, fill="#111111", outline="")
+            self.canvas.create_oval(x1, y1, x2, y2, fill=food_color, outline="gray")
+        else:
+            self.canvas.create_rectangle(x1, y1, x2, y2, fill=food_color, outline=food_color)
+        
+        if self.food:
+            x1 = self.food[0] * CELL_SIZE
+            y1 = self.food[1] * CELL_SIZE
+            x2 = x1 + CELL_SIZE
+            y2 = y1 + CELL_SIZE
+            food_color = COLORS["food_bonus"] if self.food_bonus else COLORS["food"]
+
+            if self.is_3d:
+                self.canvas.create_oval(x1 + 3, y1 + 3, x2 + 3, y2 + 3, fill="#222222", outline="")
+                self.canvas.create_oval(x1 - 2, y1 - 2, x2 + 2, y2 + 2, fill=food_color, outline="#ffffff")
+            else:
+                self.canvas.create_rectangle(x1, y1, x2, y2, fill=food_color, outline=food_color)
 
         if self.food_green_active and self.food_green:
-            self.canvas.create_rectangle(
-                self.food_green[0] * CELL_SIZE, self.food_green[1] * CELL_SIZE,
-                (self.food_green[0] + 1) * CELL_SIZE, (self.food_green[1] + 1) * CELL_SIZE,
-                fill=COLORS["food_green"], outline=COLORS["food_green"]
-            )
+            x1 = self.food_green[0] * CELL_SIZE
+            y1 = self.food_green[1] * CELL_SIZE
+            x2 = x1 + CELL_SIZE
+            y2 = y1 + CELL_SIZE
+
+            if self.is_3d:
+                self.canvas.create_oval(x1 + 3, y1 + 3, x2 + 3, y2 + 3, fill="#111111", outline="")
+                self.canvas.create_oval(x1 - 2, y1 - 2, x2 + 2, y2 + 2, fill=COLORS["food_green"], outline="#33ff33")
+            else:
+                self.canvas.create_rectangle(x1, y1, x2, y2, fill=COLORS["food_green"], outline=COLORS["food_green"])
 
     def update_status(self):
         self.status_bar.config(
@@ -440,7 +477,7 @@ class SnakeGame:
     def show_legend(self):
         legend_text = (
             "Управление: ← ↑ ↓ → — движение | "
-            "Пробел — пауза | Enter — новая игра | Ctrl — ускорение | R - смена фона"
+            "Пробел — пауза | Enter — новая игра | Ctrl — ускорение | R - смена фона | Q - изменение мира"
         )
         self.legend_label = tk.Label(
             self.game_frame, text=legend_text,
@@ -471,6 +508,9 @@ class SnakeGame:
 
         self.draw()
         self.update_status()
+    def toggle_3d_mode(self):
+        self.is_3d = not self.is_3d
+        self.draw()
 
 if __name__ == "__main__":
     root = tk.Tk()
