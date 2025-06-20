@@ -72,7 +72,6 @@ class SnakeGame:
         self.processed_milestones = set()
         self.extra_life = False
 
-
         self.records = []
         self.load_scores()
         self.bind_keys()
@@ -82,6 +81,11 @@ class SnakeGame:
         self.reset_button.pack(pady=10)
         self.show_legend()
         self.is_3d = False
+
+        self.pro = None
+        self.can_shoot = True
+        self.last_shot_score = 0
+
 
 
     def reset_scores(self):
@@ -138,6 +142,8 @@ class SnakeGame:
         self.root.bind("<KeyRelease-Control_L>", lambda e: self.set_ctrl(False))
         self.root.bind("r", lambda e: self.randomize_theme())
         self.root.bind("q", lambda e: self.toggle_3d_mode())
+        self.root.bind("w", lambda e: self.shoot_pro())
+
 
 
 
@@ -317,6 +323,10 @@ class SnakeGame:
                 self.canvas.create_oval(x1 - 2, y1 - 2, x2 + 2, y2 + 2, fill=COLORS["food_green"], outline="#33ff33")
             else:
                 self.canvas.create_rectangle(x1, y1, x2, y2, fill=COLORS["food_green"], outline=COLORS["food_green"])
+        if self.pro:
+            x = self.pro["x"] * CELL_SIZE
+            y = self.pro["y"] * CELL_SIZE
+            self.canvas.create_oval(x + 5, y + 5, x + 15, y + 15, fill="#ffcc00", outline="#ffaa00")
 
     def update_status(self):
         self.status_bar.config(
@@ -476,8 +486,8 @@ class SnakeGame:
                 self.game_loop()
     def show_legend(self):
         legend_text = (
-            "Управление: ← ↑ ↓ → — движение | "
-            "Пробел — пауза | Enter — новая игра | Ctrl — ускорение | R - смена фона | Q - изменение мира"
+            "Управление: ← ↑ ↓ → - движение | "
+            "Пробел - пауза | Enter - новая игра | Ctrl - ускорение | R - смена фона | W - выстрел"
         )
         self.legend_label = tk.Label(
             self.game_frame, text=legend_text,
@@ -508,9 +518,52 @@ class SnakeGame:
 
         self.draw()
         self.update_status()
+
     def toggle_3d_mode(self):
         self.is_3d = not self.is_3d
         self.draw()
+    
+    def shoot_pro(self):
+        if not self.running or self.paused:
+            return
+        if self.score - self.last_shot_score < 30:
+            return 
+        head_x, head_y = self.snake[0]
+        dx, dy = 0, 0
+        if self.direction == "Up":
+            dy = -1
+        elif self.direction == "Down":
+            dy = 1
+        elif self.direction == "Left":
+            dx = -1
+        elif self.direction == "Right":
+            dx = 1
+        self.pro = {"x": head_x, "y": head_y, "dx": dx, "dy": dy}
+
+        self.last_shot_score = self.score
+        self.animate_pro()
+    
+    def animate_pro(self):
+        if not self.pro:
+            return
+
+        x = self.pro["x"] + self.pro["dx"]
+        y = self.pro["y"] + self.pro["dy"]
+
+        if x < 0 or x >= self.grid_width or y < 0 or y >= self.grid_height:
+            self.pro = None
+            return
+
+        if (x, y) in self.walls:
+            self.walls.remove((x, y))
+            self.pro = None
+            self.draw()
+            return
+
+        self.pro["x"] = x
+        self.pro["y"] = y
+        self.draw()
+        self.root.after(50, self.animate_pro)
 
 if __name__ == "__main__":
     root = tk.Tk()
