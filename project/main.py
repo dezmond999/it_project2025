@@ -86,6 +86,9 @@ class SnakeGame:
         self.can_shoot = True
         self.last_shot_score = 0
 
+        self.last_teleport_time = 0
+        self.teleport_cooldown = 10 
+
 
 
     def reset_scores(self):
@@ -143,6 +146,8 @@ class SnakeGame:
         self.root.bind("r", lambda e: self.randomize_theme())
         self.root.bind("q", lambda e: self.toggle_3d_mode())
         self.root.bind("w", lambda e: self.shoot_pro())
+        self.root.bind("e", lambda e: self.teleport())
+
 
 
 
@@ -564,6 +569,30 @@ class SnakeGame:
         self.pro["y"] = y
         self.draw()
         self.root.after(50, self.animate_pro)
+    def teleport(self):
+        if not self.running or self.paused:
+            return
+
+        now = time.time()
+        if now - self.last_teleport_time < self.teleport_cooldown:
+            return  
+
+        new_pos = self.get_free_cell()
+        old_head = self.snake[0]
+        dx = new_pos[0] - old_head[0]
+        dy = new_pos[1] - old_head[1]
+
+        self.snake = [(x + dx, y + dy) for x, y in self.snake]
+        self.snake = [seg for seg in self.snake if 0 <= seg[0] < self.grid_width and 0 <= seg[1] < self.grid_height]
+        self.last_teleport_time = now
+        self.canvas.create_text(
+            self.grid_width * CELL_SIZE // 2,
+            self.grid_height * CELL_SIZE // 2,
+            text="⚡ Телепортация! ⚡",
+            font=("Arial", 20, "bold"),
+            fill="#00ffcc"
+        )
+        self.draw()
 
 if __name__ == "__main__":
     root = tk.Tk()
