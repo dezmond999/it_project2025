@@ -492,7 +492,7 @@ class SnakeGame:
     def show_legend(self):
         legend_text = (
             "Управление: ← ↑ ↓ → - движение | "
-            "Пробел - пауза | Enter - новая игра | Ctrl - ускорение | R - смена фона | W - выстрел"
+            "Пробел - пауза | Enter - новая игра | Ctrl - ускорение | R - смена фона | W - выстрел | Q - изменение формы змейки | E - телепорт (кд 45с)"
         )
         self.legend_label = tk.Label(
             self.game_frame, text=legend_text,
@@ -588,7 +588,7 @@ class SnakeGame:
         self.canvas.create_text(
             self.grid_width * CELL_SIZE // 2,
             self.grid_height * CELL_SIZE // 2,
-            text="⚡ Телепортация! ⚡",
+            text="⚡",
             font=("Arial", 20, "bold"),
             fill="#00ffcc"
         )
